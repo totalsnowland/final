@@ -4,16 +4,40 @@
 
 #include <string>
 
-std::string ip;
-std::string port;
-std::string dir;
+
+int demonize (){
+    int pid = fork();
+
+    switch(pid) {
+	case 0:
+	    setsid();
+	    chdir("/");
+
+	    close(0);
+	    close(1);
+	    close(2);
+
+	    exit(EXIT_SUCCESS);
+
+	case -1:
+	    printf("Error: unable to fork\n");
+	    break;
+
+	default:
+	    printf("Success: process %d went to background\n", pid);
+	    break;
+    }
+
+    return 0;
+}
 
 int main(int argc, char *argv[])
 {
+    std::string ip;
+    std::string port;
+    std::string dir;
+
     int  opt;
-    //int nsecs, tfnd;
-
-
     while ((opt = getopt(argc, argv, "h:p:d:")) != -1) {
         switch (opt) {
         case 'h':
@@ -31,9 +55,7 @@ int main(int argc, char *argv[])
         }
     }
 
-
-
-
+    demonize ();
 
     exit(EXIT_SUCCESS);
 }
