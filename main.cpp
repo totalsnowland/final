@@ -5,6 +5,7 @@
 #include <string>
 
 #include <thread>
+#include <stdlib.h>
 
 #ifdef WIN32
 #include <winsock2.h>
@@ -45,6 +46,33 @@ void Throw(const char* format,...){
 }
 #define ThrowRuntime Throw<std::runtime_error>
 
+//ToDo realize fast and threadsafe log
+void log (const char* format,...){
+    va_list ap;
+    va_start(ap, format);
+    vprintf(format, ap);
+    va_end(ap);
+}
+//-----------------------------------------------------------------------------
+#include <sstream>
+#include <string>
+#include <vector>
+
+std::vector<std::string> &split(const std::string &s, char delim, std::vector<std::string> &elems) {
+    std::stringstream ss(s);
+    std::string item;
+    while (std::getline(ss, item, delim)) {
+        elems.push_back(item);
+    }
+    return elems;
+}
+
+std::vector<std::string> split(const std::string &s, char delim) {
+    std::vector<std::string> elems;
+    split(s, delim, elems);
+    return elems;
+}
+//------------------------------------------------------------------------------
 
 int demonize (){
     int pid = fork();
@@ -61,11 +89,11 @@ int demonize (){
 	    exit(EXIT_SUCCESS);
 
 	case -1:
-	    printf("Error: unable to fork\n");
+	    log("Error: unable to fork\n");
 	    break;
 
 	default:
-	    printf("Success: process %d went to background\n", pid);
+	    log("Success: process %d went to background\n", pid);
 	    break;
     }
 
@@ -79,7 +107,7 @@ int openSocket(const std::string &tcp_ip_v4_addres){
     if((serverSocket = socket(AF_INET , SOCK_STREAM , 0 )) == INVALID_SOCKET)
         ThrowRuntime ( "Could not create socket : %d" , errNum() );
 
-    printf("Socket created.\n");
+    log("Socket created.\n");
 
     //Prepare the sockaddr_in structure
     server.sin_family = AF_INET;
@@ -94,9 +122,77 @@ int openSocket(const std::string &tcp_ip_v4_addres){
     return serverSocket;
 }
 
+
+//------------------------------------------------------------------------------
+void processHttpReq (const std::string &req,int socket){
+    auto lines = split (req,'\x0A');
+    auto header = split (lines[0],' ');
+
+    if (header[0] == "GET"){
+        log("GET req\n");
+        auto resName = header[1];
+
+        if (resName == "/")
+            resName = "index.html";
+
+        auto f = fopen(resName.c_str(),"rb");
+        if (f){
+            fseek(f,0,SEEK_END);
+            auto size = ftell(f);
+            fseek(f,0,SEEK_SET);
+
+            std::vector<char> buff;
+            buff.resize(size);
+            fread(buff.data(),size,1,f);
+            fclose(f);
+
+            std::string header = std::string("HTTP/1.0 200 OK\x0D\x0A") +
+                                 "Content-Length :"+ std::to_string(buff.size()) +"\x0D\x0A" +
+                                 "\x0D\x0A";
+            write(socket,header.c_str(),header.size());
+
+
+            write(socket,buff.data(),buff.size());
+
+
+            log("Resource %s is sent.\n",resName.c_str());
+        }
+        else{
+            log("Resource %s is not found.\n",resName.c_str());
+            char respound[] = "HTTP/1.0 404 \x0D\x0A";
+            write(socket,respound,sizeof(respound));
+        }
+    }
+    else
+        log("Unsuported req\n");
+
+}
+
 void processConection (int socket){
-    //printf("new thread\n");
+
+    unsigned int conectionId = rand();
+    log("Open connection %i\n",conectionId);
+
+    char buffer[10*1024];
+
+    while (true){
+        auto size = read (socket,&buffer,10*1024);
+        if (size <= 0)
+            break;
+
+        log("New reqwest in connection %i \n",conectionId);
+        log("----------------------------------------------\n");
+        log("%s",buffer);
+        log("----------------------------------------------\n");
+        fflush(stdout);
+
+        processHttpReq (buffer,socket);
+
+
+    }
+
     close (socket);
+    log("Close connection %i\n",conectionId);
 }
 
 int main(int argc, char *argv[])
@@ -110,11 +206,11 @@ int main(int argc, char *argv[])
         switch (opt) {
         case 'h':
             ip = optarg;
-        case 'p':  
+        case 'p':
             port = optarg;
         case 'd':
             dir = optarg;
-            printf("%s\n",optarg);
+            log("%s\n",optarg);
             break;    
         default: /* '?' */
             fprintf(stderr, "Usage: %s [-t nsecs] [-n] name\n",
