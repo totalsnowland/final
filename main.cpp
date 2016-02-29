@@ -133,7 +133,11 @@ void processHttpReq (const std::string &req,int socket){
         auto resName = header[1];
 
         if (resName == "/")
-            resName = "index.html";
+            resName = "/index.html";
+
+        if (resName[0] == '/')
+            resName = std::string(&resName[1]);
+        resName = resName.substr(0,resName.find('?',0));
 
         auto f = fopen(resName.c_str(),"rb");
         if (f){
