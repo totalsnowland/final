@@ -36,13 +36,13 @@ int errNum (){ return errno;}
 template <typename Error>
 void Throw(const char* format,...){
 
-	va_list ap;
-	char buff[256];
-	va_start(ap, format);
-	vsprintf(buff, format, ap);
-	va_end(ap);
+    va_list ap;
+    char buff[256];
+    va_start(ap, format);
+    vsprintf(buff, format, ap);
+    va_end(ap);
 
-        throw Error (buff);
+    throw Error (buff);
 }
 #define ThrowRuntime Throw<std::runtime_error>
 
@@ -78,21 +78,21 @@ int demonize (){
     int pid = fork();
 
     switch(pid) {
-	case 0:
+    case 0:
 
-	case -1:
-	    log("Error: unable to fork\n");
-	    break;
+    case -1:
+        log("Error: unable to fork\n");
+        break;
 
-	default:
-	    log("Success: process %d went to background\n", pid);
+    default:
+        log("Success: process %d went to background\n", pid);
         setsid();
 
         close(0);
         close(1);
         close(2);
         exit(EXIT_SUCCESS);
-	    break;
+        break;
     }
 
     return 0;
