@@ -100,7 +100,7 @@ int demonize (){
     return 0;
 }
 
-int openSocket(const std::string &tcp_ip_v4_addres){
+int openSocket(const std::string &tcp_ip_v4_addres, unsigned int port ){
     sockaddr_in server;
     //Create a socket
     int serverSocket = INVALID_SOCKET;
@@ -112,7 +112,7 @@ int openSocket(const std::string &tcp_ip_v4_addres){
     //Prepare the sockaddr_in structure
     server.sin_family = AF_INET;
     server.sin_addr.s_addr = INADDR_ANY;
-    server.sin_port = htons( 8080 );    //ToDo Port here
+    server.sin_port = htons( port );    //ToDo Port here
 
     //Bind
     if( bind(serverSocket ,(struct sockaddr *)&server , sizeof(server)) == SOCKET_ERROR)
@@ -121,7 +121,6 @@ int openSocket(const std::string &tcp_ip_v4_addres){
     puts("Bind done");
     return serverSocket;
 }
-
 
 //------------------------------------------------------------------------------
 void processHttpReq (const std::string &req,int socket){
@@ -226,7 +225,9 @@ int main(int argc, char *argv[])
 
     demonize ();
 
-    auto serverSocket = openSocket("");
+    chdir(dir.c_str());
+
+    auto serverSocket = openSocket("", std::stoi(port));
     while (1){
         if( 0 != listen(serverSocket, 5))
             ThrowRuntime("Listen failed with error code : %d", errNum());
