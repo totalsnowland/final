@@ -153,8 +153,8 @@ void processHttpReq (const std::string &req,int socket){
 
             std::string header = std::string("HTTP/1.0 200 OK\x0D\x0A") +
                                  "Content-Type: text/html\x0D\x0A" +
-                                 "Content-Length :"+ std::to_string(buff.size()) +"\x0D\x0A" +
-                                 "Connection:keep-alive\x0D\x0A" +
+                                 "Content-Length: "+ std::to_string(buff.size()) +"\x0D\x0A" +
+                                 "Connection: keep-alive\x0D\x0A" +
                                  "\x0D\x0A";
             write(socket,header.c_str(),header.size());
 
