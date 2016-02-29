@@ -79,14 +79,6 @@ int demonize (){
 
     switch(pid) {
 	case 0:
-	    setsid();
-	    chdir("/");
-
-	    close(0);
-	    close(1);
-	    close(2);
-
-	    exit(EXIT_SUCCESS);
 
 	case -1:
 	    log("Error: unable to fork\n");
@@ -94,6 +86,12 @@ int demonize (){
 
 	default:
 	    log("Success: process %d went to background\n", pid);
+        setsid();
+
+        close(0);
+        close(1);
+        close(2);
+        exit(EXIT_SUCCESS);
 	    break;
     }
 
