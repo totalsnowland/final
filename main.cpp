@@ -159,7 +159,7 @@ void processHttpReq (const std::string &req,int socket){
         }
         else{
             log("Resource %s is not found.\n",resName.c_str());
-            char respound[] = "HTTP/1.0 404 \x0D\x0A";
+            char respound[] = "HTTP/1.0 404 NOT FOUND\x0D\x0AContent-Type: text/html\x0D\x0A\x0D\x0A";
             write(socket,respound,sizeof(respound));
         }
     }
