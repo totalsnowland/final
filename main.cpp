@@ -183,13 +183,8 @@ void processConection (int socket){
             break;
 
         log("New reqwest in connection %i \n",conectionId);
-        log("----------------------------------------------\n");
-        log("%s",buffer);
-        log("----------------------------------------------\n");
-        fflush(stdout);
-
         processHttpReq (buffer,socket);
-
+        fflush(stdout);
 
     }
 
