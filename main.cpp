@@ -50,14 +50,14 @@ void Throw(const char* format,...){
 FILE* logFile;
 std::mutex logMutex;
 void log (const char* format,...){
-    std::lock_guard<std::mutex> lock(logMutex);
+  /*  std::lock_guard<std::mutex> lock(logMutex);
 
     va_list ap;
     va_start(ap, format);
     vfprintf(logFile, format, ap);
     va_end(ap);
 
-    fflush(logFile);
+    fflush(logFile);*/
 }
 //-----------------------------------------------------------------------------
 #include <sstream>
@@ -233,7 +233,7 @@ int main(int argc, char *argv[])
     logFile = fopen ("log.txt", "wb");
     if (logFile == NULL){
         printf("Can't create log");
-        exit(EXIT_FAILURE);
+        //exit(EXIT_FAILURE);
     }
 
     log("Start server %s : %s in %s \n\n", ip.c_str(), port.c_str(), dir.c_str());
