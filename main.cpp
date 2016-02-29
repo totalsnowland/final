@@ -30,6 +30,7 @@ int errNum (){ return errno;}
 #define closesocket close
 #endif
 
+#include <mutex>
 #include <cstdio>
 #include <stdarg.h>
 
@@ -46,12 +47,17 @@ void Throw(const char* format,...){
 }
 #define ThrowRuntime Throw<std::runtime_error>
 
-//ToDo realize fast and threadsafe log
+FILE* logFile;
+std::mutex logMutex;
 void log (const char* format,...){
+    std::lock_guard<std::mutex> lock(logMutex);
+
     va_list ap;
     va_start(ap, format);
-    vprintf(format, ap);
+    vfprintf(logFile, format, ap);
     va_end(ap);
+
+    fflush(logFile);
 }
 //-----------------------------------------------------------------------------
 #include <sstream>
@@ -81,11 +87,9 @@ int demonize (){
     case 0:
 
     case -1:
-        log("Error: unable to fork\n");
         break;
 
     default:
-        log("Success: process %d went to background\n", pid);
         setsid();
 
         close(0);
@@ -173,7 +177,8 @@ void processHttpReq (const std::string &req,int socket){
 
 void processConection (int socket){
 
-    unsigned int conectionId = rand();
+   auto threadId = std::this_thread::get_id();
+   int conectionId = ((int*)&threadId)[0];
     log("Open connection %i\n",conectionId);
 
     char buffer[10*1024];
@@ -183,9 +188,9 @@ void processConection (int socket){
         if (size <= 0)
             break;
 
-        log("New reqwest in connection %i \n",conectionId);
+        log("New reqwest in connection %i \n%s\n\n",conectionId,buffer);
+
         processHttpReq (buffer,socket);
-        fflush(stdout);
 
     }
 
@@ -204,12 +209,13 @@ int main(int argc, char *argv[])
         switch (opt) {
         case 'h':
             ip = optarg;
+            break;
         case 'p':
             port = optarg;
+            break;
         case 'd':
             dir = optarg;
-            log("%s\n",optarg);
-            break;    
+            break;
         default: /* '?' */
             fprintf(stderr, "Usage: %s [-t nsecs] [-n] name\n",
                     argv[0]);
@@ -217,13 +223,26 @@ int main(int argc, char *argv[])
         }
     }
 
+    if (ip == "" or port == "" or dir == ""){
+        printf("You can't set ip, port or dir");
+        exit(EXIT_FAILURE);
+    }
+
     demonize ();
+
+    logFile = fopen ("log.txt", "wb");
+    if (logFile == NULL){
+        printf("Can't create log");
+        exit(EXIT_FAILURE);
+    }
+
+    log("Start server %s : %s in %s \n\n", ip.c_str(), port.c_str(), dir.c_str());
 
     chdir(dir.c_str());
 
     auto serverSocket = openSocket("", std::stoi(port));
     while (1){
-        if( 0 != listen(serverSocket, 5))
+        if( 0 != listen(serverSocket, 50))
             ThrowRuntime("Listen failed with error code : %d", errNum());
 
         int newsock = INVALID_SOCKET;
@@ -232,13 +251,12 @@ int main(int argc, char *argv[])
         if (INVALID_SOCKET == (newsock = accept(serverSocket, (struct sockaddr *) &cli_addr, &cli_len)) )
             ThrowRuntime("accept() failed: %d\n", errno);
 
-        //printf("income from port %i\n",cli_addr.sin_port);
-
         std::thread thread (processConection,newsock);
         thread.detach();
     }
 
     closesocket(serverSocket);
+    fclose(logFile);
 
     exit(EXIT_SUCCESS);
 }
